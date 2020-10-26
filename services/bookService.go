@@ -1,15 +1,14 @@
 package services
 
 import (
-	"book-library/domain"
-	"book-library/repository"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"go-rest-webservices-book-library/domain"
+	"go-rest-webservices-book-library/repository"
 	"log"
 	"net/http"
 )
-
 
 func BookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -42,7 +41,7 @@ func updateBookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getBookHandler(w http.ResponseWriter, r * http.Request)  {
+func getBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
@@ -90,7 +89,7 @@ func GetAllBooksHandler(w http.ResponseWriter, _ *http.Request) {
 	_, _ = fmt.Fprintf(w, getString(books))
 }
 
-func AddBookHandler(w http.ResponseWriter, r * http.Request) {
+func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var book domain.Book

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"book-library/repository"
-	"book-library/services"
 	"github.com/gorilla/mux"
+	"go-rest-webservices-book-library/repository"
+	"go-rest-webservices-book-library/services"
 	"net/http"
 )
 

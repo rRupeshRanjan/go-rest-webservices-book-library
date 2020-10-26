@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"book-library/domain"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	"go-rest-webservices-book-library/domain"
 	"log"
 )
 

@@ -1,4 +1,4 @@
-module book-library
+module go-rest-webservices-book-library
 
 go 1.15
 
