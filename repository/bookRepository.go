@@ -10,16 +10,15 @@ import (
 var database *sql.DB
 
 const (
-	createQuery = "SELECT * FROM books WHERE id=?"
-	updateQuery = "UPDATE books SET name=?, author=? where id=?"
-	deleteQuery = "DELETE FROM books WHERE id=?"
-	getAllQuery = "SELECT id, name, author FROM books"
-	insertQuery = "INSERT INTO books (name, author) VALUES (?, ?)"
-	initializeDatabaseQuery =
-		`CREATE TABLE IF NOT EXISTS books (
-					id INTEGER PRIMARY KEY, 
-					name TEXT, 
-					author TEXT);`
+	getQuery                = "SELECT * FROM books WHERE id=?"
+	updateQuery             = "UPDATE books SET name=?, author=? where id=?"
+	deleteQuery             = "DELETE FROM books WHERE id=?"
+	getAllQuery             = "SELECT id, name, author FROM books"
+	insertQuery             = "INSERT INTO books (name, author) VALUES (?, ?)"
+	initializeDatabaseQuery = `CREATE TABLE IF NOT EXISTS books (
+									id INTEGER PRIMARY KEY, 
+									name TEXT, 
+									author TEXT);`
 )
 
 func InitBooksDb() {
@@ -38,7 +37,7 @@ func UpdateBook(book domain.Book, id string) error {
 }
 
 func GetBook(id string) (*sql.Rows, error) {
-	rows, err := database.Query(createQuery, id)
+	rows, err := database.Query(getQuery, id)
 	return rows, err
 }
 
