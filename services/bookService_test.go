@@ -42,26 +42,25 @@ func (b booksRepositoryMock) deleteBook(id string) error {
 }
 
 func TestIsBookValidFalseForInvalidData(t *testing.T) {
-	var books = []domain.Book{
-		{Name: "", Author: ""},
-		{Name: "Book", Author: ""},
-		{Name: "", Author: "author"},
+	var jsonStrs = [][]byte{
+		[]byte(`{"Name":"Book", "Author": ""}`),
+		[]byte(`{"Name", "", "Author": "Author"}`),
+		[]byte(`{"Name": "", "Author": ""}`),
+		[]byte(`{}`),
 	}
 
-	for _, book := range books {
-		isBookValid := isValidData(book)
-		_ = assert.False(t, isBookValid)
+	for _, jsonStr := range jsonStrs {
+		r, _ := http.NewRequest("", "", bytes.NewBuffer(jsonStr))
+		_, valid := isValidData(r)
+		_ = assert.False(t, valid)
 	}
 }
 
-func TestIsBookValidFalseForValidData(t *testing.T) {
-	var book = domain.Book{
-		Name:   "Book",
-		Author: "Author",
-	}
-	isBookValid := isValidData(book)
-
-	_ = assert.True(t, isBookValid)
+func TestIsBookValidTrueForValidData(t *testing.T) {
+	var jsonStr = []byte(`{"Name":"Book", "Author": "Author"}`)
+	r, _ := http.NewRequest("", "", bytes.NewBuffer(jsonStr))
+	_, valid := isValidData(r)
+	_ = assert.True(t, valid)
 }
 
 func TestGetString(t *testing.T) {
@@ -338,4 +337,16 @@ func TestUpdateBookFailureBadData(t *testing.T) {
 
 		_ = assert.Equals(t, http.StatusBadRequest, w.Code)
 	}
+}
+
+func TestUnsupportedMethods(t *testing.T) {
+	booksRepository = booksRepositoryMock{}
+
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("OPTIONS", "/book/1", nil)
+	r.Header.Set("Content-Type", "application/json")
+
+	BookHandler(w, r)
+
+	_ = assert.Equals(t, http.StatusMethodNotAllowed, w.Code)
 }

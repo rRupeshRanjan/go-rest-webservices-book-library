@@ -59,18 +59,17 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 		deleteBookHandler(w, r)
 	case "PUT":
 		updateBookHandler(w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
 func updateBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
+	book, valid := isValidData(r)
 
-	var book domain.Book
-	requestBody := r.Body
-	decodeErr := json.NewDecoder(requestBody).Decode(&book)
-
-	if decodeErr == nil && isValidData(book) {
+	if valid {
 		updateErr := booksRepository.updateBook(book, id)
 		if updateErr == nil {
 			book.Id, _ = strconv.ParseInt(id, 10, 64)
@@ -131,12 +130,9 @@ func GetAllBooksHandler(w http.ResponseWriter, _ *http.Request) {
 
 func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	book, valid := isValidData(r)
 
-	var book domain.Book
-	requestBody := r.Body
-	decodeErr := json.NewDecoder(requestBody).Decode(&book)
-
-	if decodeErr == nil && isValidData(book) {
+	if valid {
 		rowId, insertRecordErr := booksRepository.addBook(book)
 		if insertRecordErr == nil {
 			book.Id = rowId
@@ -150,8 +146,12 @@ func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isValidData(book domain.Book) bool {
-	return book.Name != "" && book.Author != ""
+func isValidData(r *http.Request) (domain.Book, bool) {
+	var book domain.Book
+	requestBody := r.Body
+	decodeErr := json.NewDecoder(requestBody).Decode(&book)
+
+	return book, decodeErr == nil && book.Name != "" && book.Author != ""
 }
 
 func getString(input interface{}) string {

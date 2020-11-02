@@ -83,7 +83,7 @@ import (
         "strconv"
 )
 
-type BooksRepository struct {}
+type BooksRepository struct{}
 
 type BooksRepositoryInterface interface {
         getBook(id string) ([]domain.Book, error)
@@ -130,18 +130,17 @@ func BookHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" titl
                 deleteBookHandler(w, r)</span>
         case "PUT":<span class="cov8" title="1">
                 updateBookHandler(w, r)</span>
+        default:<span class="cov8" title="1">
+                w.WriteHeader(http.StatusMethodNotAllowed)</span>
         }
 }
 
 func updateBookHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
         vars := mux.Vars(r)
         id := vars["id"]
+        book, valid := isValidData(r)
 
-        var book domain.Book
-        requestBody := r.Body
-        decodeErr := json.NewDecoder(requestBody).Decode(&amp;book)
-
-        if decodeErr == nil &amp;&amp; isValidData(book) </span><span class="cov8" title="1">{
+        if valid </span><span class="cov8" title="1">{
                 updateErr := booksRepository.updateBook(book, id)
                 if updateErr == nil </span><span class="cov8" title="1">{
                         book.Id, _ = strconv.ParseInt(id, 10, 64)
@@ -202,12 +201,9 @@ func GetAllBooksHandler(w http.ResponseWriter, _ *http.Request) <span class="cov
 
 func AddBookHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
         w.Header().Set("Content-Type", "application/json")
+        book, valid := isValidData(r)
 
-        var book domain.Book
-        requestBody := r.Body
-        decodeErr := json.NewDecoder(requestBody).Decode(&amp;book)
-
-        if decodeErr == nil &amp;&amp; isValidData(book) </span><span class="cov8" title="1">{
+        if valid </span><span class="cov8" title="1">{
                 rowId, insertRecordErr := booksRepository.addBook(book)
                 if insertRecordErr == nil </span><span class="cov8" title="1">{
                         book.Id = rowId
@@ -221,8 +217,12 @@ func AddBookHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" t
         }</span>
 }
 
-func isValidData(book domain.Book) bool <span class="cov8" title="1">{
-        return book.Name != "" &amp;&amp; book.Author != ""
+func isValidData(r *http.Request) (domain.Book, bool) <span class="cov8" title="1">{
+        var book domain.Book
+        requestBody := r.Body
+        decodeErr := json.NewDecoder(requestBody).Decode(&amp;book)
+
+        return book, decodeErr == nil &amp;&amp; book.Name != "" &amp;&amp; book.Author != ""
 }</span>
 
 func getString(input interface{}) string <span class="cov8" title="1">{
@@ -230,7 +230,7 @@ func getString(input interface{}) string <span class="cov8" title="1">{
         stringObject := ""
 
         if deserializationErr == nil </span><span class="cov8" title="1">{
-                stringObject =  string(jsonDeserializedObject)
+                stringObject = string(jsonDeserializedObject)
         }</span> else<span class="cov0" title="0"> {
                 log.Printf("Error while deserializing data: %s", deserializationErr)
         }</span>
