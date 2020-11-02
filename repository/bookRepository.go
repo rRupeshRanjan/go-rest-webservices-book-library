@@ -36,9 +36,17 @@ func UpdateBook(book domain.Book, id string) error {
 	return err
 }
 
-func GetBook(id string) (*sql.Rows, error) {
+func GetBook(id string) ([]domain.Book, error) {
 	rows, err := database.Query(getQuery, id)
-	return rows, err
+	var books []domain.Book
+
+	if err == nil && rows.Next() {
+		var book domain.Book
+		_ = rows.Scan(&book.Id, &book.Name, &book.Author)
+		books = append(books, book)
+	}
+
+	return books, err
 }
 
 func DeleteBook(id string) error {
@@ -48,9 +56,18 @@ func DeleteBook(id string) error {
 	return err
 }
 
-func GetAllBooks() *sql.Rows {
-	rows, _ := database.Query(getAllQuery)
-	return rows
+func GetAllBooks() ([]domain.Book, error) {
+	rows, err := database.Query(getAllQuery)
+
+	var books []domain.Book
+
+	for err == nil && rows.Next() {
+		var book domain.Book
+		err = rows.Scan(&book.Id, &book.Name, &book.Author)
+		books = append(books, book)
+	}
+
+	return books, err
 }
 
 func AddBook(book domain.Book) (int64, error) {

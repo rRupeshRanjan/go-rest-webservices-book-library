@@ -2,13 +2,12 @@ package main
 
 import (
 	"github.com/gorilla/mux"
-	"go-rest-webservices-book-library/repository"
 	"go-rest-webservices-book-library/services"
 	"net/http"
 )
 
 func main() {
-	repository.InitBooksDb()
+	services.Init()
 	router := mux.NewRouter()
 
 	router.HandleFunc("/books", services.GetAllBooksHandler).Methods("GET")
