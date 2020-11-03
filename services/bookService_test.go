@@ -93,7 +93,6 @@ func TestDeleteBooksSuccess(t *testing.T) {
 }
 
 func TestDeleteBooksFailure(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryDeleteMock = func(id string) error {
 		return errors.New("something bad happened")
 	}
@@ -111,7 +110,6 @@ func TestDeleteBooksFailure(t *testing.T) {
 }
 
 func TestAddBookHandlerSuccess(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
 		return 0, nil
 	}
@@ -133,7 +131,6 @@ func TestAddBookHandlerSuccess(t *testing.T) {
 }
 
 func TestAddBookHandlerFailureBadData(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
 		return 0, nil
 	}
@@ -157,7 +154,6 @@ func TestAddBookHandlerFailureBadData(t *testing.T) {
 }
 
 func TestAddBookHandlerFailureDatabaseError(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
 		return 0, errors.New("error occurred while inserting record into database")
 	}
@@ -174,7 +170,6 @@ func TestAddBookHandlerFailureDatabaseError(t *testing.T) {
 }
 
 func TestGetBookSuccess(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	var books []domain.Book
 	books = append(books, domain.Book{Id: 8, Name: "Book", Author: "Author"})
 	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
@@ -200,7 +195,6 @@ func TestGetBookSuccess(t *testing.T) {
 }
 
 func TestGetBookFailureDatabaseError(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
 		return []domain.Book{}, errors.New("error while fetching data")
 	}
@@ -216,7 +210,6 @@ func TestGetBookFailureDatabaseError(t *testing.T) {
 }
 
 func TestGetBookNoRecordsFound(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
 		return []domain.Book{}, nil
 	}
@@ -232,7 +225,6 @@ func TestGetBookNoRecordsFound(t *testing.T) {
 }
 
 func TestGetAllBooksHandlerSuccess(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	var books []domain.Book
 	books = append(books, domain.Book{Id: 1, Name: "Book1", Author: "Author1"})
 	books = append(books, domain.Book{Id: 2, Name: "Book2", Author: "Author2"})
@@ -262,7 +254,6 @@ func TestGetAllBooksHandlerSuccess(t *testing.T) {
 }
 
 func TestGetAllBooksHandlerFailureDatabaseError(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryGetAllMock = func() ([]domain.Book, error) {
 		return []domain.Book{}, errors.New("error while getting data from database")
 	}
@@ -276,7 +267,6 @@ func TestGetAllBooksHandlerFailureDatabaseError(t *testing.T) {
 }
 
 func TestUpdateBookSuccess(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
 		return nil
 	}
@@ -299,7 +289,6 @@ func TestUpdateBookSuccess(t *testing.T) {
 }
 
 func TestUpdateBookFailureDatabaseError(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
 		return errors.New("error while updating record in database")
 	}
@@ -316,7 +305,6 @@ func TestUpdateBookFailureDatabaseError(t *testing.T) {
 }
 
 func TestUpdateBookFailureBadData(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
 	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
 		return nil
 	}
@@ -340,8 +328,6 @@ func TestUpdateBookFailureBadData(t *testing.T) {
 }
 
 func TestUnsupportedMethods(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
-
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("OPTIONS", "/book/1", nil)
 	r.Header.Set("Content-Type", "application/json")
