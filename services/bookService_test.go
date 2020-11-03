@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/christianhujer/assert"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 	"go-rest-webservices-book-library/domain"
 	"net/http"
 	"net/http/httptest"
@@ -15,11 +15,13 @@ import (
 
 type booksRepositoryMock struct{}
 
-var booksRepositoryGetMock func(id string) ([]domain.Book, error)
-var booksRepositoryGetAllMock func() ([]domain.Book, error)
-var booksRepositoryAddMock func(book domain.Book) (int64, error)
-var booksRepositoryUpdateMock func(book domain.Book, id string) error
-var booksRepositoryDeleteMock func(id string) error
+var (
+	booksRepositoryGetMock    func(id string) ([]domain.Book, error)
+	booksRepositoryGetAllMock func() ([]domain.Book, error)
+	booksRepositoryAddMock    func(book domain.Book) (int64, error)
+	booksRepositoryUpdateMock func(book domain.Book, id string) error
+	booksRepositoryDeleteMock func(id string) error
+)
 
 func (b booksRepositoryMock) getBook(id string) ([]domain.Book, error) {
 	return booksRepositoryGetMock(id)
@@ -71,7 +73,7 @@ func TestGetString(t *testing.T) {
 	}
 
 	stringBook := getString(book)
-	_ = assert.Equals(t, "{\"Id\":1,\"Name\":\"Book\",\"Author\":\"Author\"}", stringBook)
+	assert.Equal(t, "{\"Id\":1,\"Name\":\"Book\",\"Author\":\"Author\"}", stringBook)
 }
 
 func TestDeleteBooksSuccess(t *testing.T) {
@@ -89,7 +91,7 @@ func TestDeleteBooksSuccess(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusNoContent, w.Code)
+	assert.Equal(t, http.StatusNoContent, w.Code)
 }
 
 func TestDeleteBooksFailure(t *testing.T) {
@@ -106,7 +108,7 @@ func TestDeleteBooksFailure(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestAddBookHandlerSuccess(t *testing.T) {
@@ -124,10 +126,10 @@ func TestAddBookHandlerSuccess(t *testing.T) {
 	var book domain.Book
 	_ = json.NewDecoder(w.Body).Decode(&book)
 
-	_ = assert.Equals(t, http.StatusOK, w.Code)
-	_ = assert.Equals(t, int64(0), book.Id)
-	_ = assert.Equals(t, "Book", book.Name)
-	_ = assert.Equals(t, "Author", book.Author)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, int64(0), book.Id)
+	assert.Equal(t, "Book", book.Name)
+	assert.Equal(t, "Author", book.Author)
 }
 
 func TestAddBookHandlerFailureBadData(t *testing.T) {
@@ -149,7 +151,7 @@ func TestAddBookHandlerFailureBadData(t *testing.T) {
 
 		AddBookHandler(w, r)
 
-		_ = assert.Equals(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	}
 }
 
@@ -166,7 +168,7 @@ func TestAddBookHandlerFailureDatabaseError(t *testing.T) {
 
 	AddBookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestGetBookSuccess(t *testing.T) {
@@ -188,10 +190,10 @@ func TestGetBookSuccess(t *testing.T) {
 	var book domain.Book
 	_ = json.NewDecoder(w.Body).Decode(&book)
 
-	_ = assert.Equals(t, http.StatusOK, w.Code)
-	_ = assert.Equals(t, int64(8), book.Id)
-	_ = assert.Equals(t, "Book", book.Name)
-	_ = assert.Equals(t, "Author", book.Author)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, int64(8), book.Id)
+	assert.Equal(t, "Book", book.Name)
+	assert.Equal(t, "Author", book.Author)
 }
 
 func TestGetBookFailureDatabaseError(t *testing.T) {
@@ -206,7 +208,7 @@ func TestGetBookFailureDatabaseError(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestGetBookNoRecordsFound(t *testing.T) {
@@ -221,7 +223,7 @@ func TestGetBookNoRecordsFound(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestGetAllBooksHandlerSuccess(t *testing.T) {
@@ -242,14 +244,14 @@ func TestGetAllBooksHandlerSuccess(t *testing.T) {
 	var book []domain.Book
 	_ = json.NewDecoder(w.Body).Decode(&book)
 
-	_ = assert.Equals(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	for i, book := range books {
 		i = i + 1
 		index := strconv.FormatInt(int64(i), 10)
-		_ = assert.Equals(t, int64(i), book.Id)
-		_ = assert.Equals(t, "Book"+index, book.Name)
-		_ = assert.Equals(t, "Author"+index, book.Author)
+		assert.Equal(t, int64(i), book.Id)
+		assert.Equal(t, "Book"+index, book.Name)
+		assert.Equal(t, "Author"+index, book.Author)
 	}
 }
 
@@ -263,7 +265,7 @@ func TestGetAllBooksHandlerFailureDatabaseError(t *testing.T) {
 
 	GetAllBooksHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestUpdateBookSuccess(t *testing.T) {
@@ -282,10 +284,10 @@ func TestUpdateBookSuccess(t *testing.T) {
 	var book domain.Book
 	_ = json.NewDecoder(w.Body).Decode(&book)
 
-	_ = assert.Equals(t, http.StatusOK, w.Code)
-	_ = assert.Equals(t, int64(1), book.Id)
-	_ = assert.Equals(t, "Book", book.Name)
-	_ = assert.Equals(t, "Author", book.Author)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, int64(1), book.Id)
+	assert.Equal(t, "Book", book.Name)
+	assert.Equal(t, "Author", book.Author)
 }
 
 func TestUpdateBookFailureDatabaseError(t *testing.T) {
@@ -301,7 +303,7 @@ func TestUpdateBookFailureDatabaseError(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestUpdateBookFailureBadData(t *testing.T) {
@@ -323,7 +325,7 @@ func TestUpdateBookFailureBadData(t *testing.T) {
 
 		BookHandler(w, r)
 
-		_ = assert.Equals(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	}
 }
 
@@ -334,5 +336,5 @@ func TestUnsupportedMethods(t *testing.T) {
 
 	BookHandler(w, r)
 
-	_ = assert.Equals(t, http.StatusMethodNotAllowed, w.Code)
+	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
 }
