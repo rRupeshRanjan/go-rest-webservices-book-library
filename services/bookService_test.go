@@ -172,10 +172,8 @@ func TestAddBookHandlerFailureDatabaseError(t *testing.T) {
 }
 
 func TestGetBookSuccess(t *testing.T) {
-	var books []domain.Book
-	books = append(books, domain.Book{Id: 8, Name: "Book", Author: "Author"})
 	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
-		return books, nil
+		return []domain.Book{{Id: 8, Name: "Book", Author: "Author"}}, nil
 	}
 
 	w := httptest.NewRecorder()
@@ -227,10 +225,11 @@ func TestGetBookNoRecordsFound(t *testing.T) {
 }
 
 func TestGetAllBooksHandlerSuccess(t *testing.T) {
-	var books []domain.Book
-	books = append(books, domain.Book{Id: 1, Name: "Book1", Author: "Author1"})
-	books = append(books, domain.Book{Id: 2, Name: "Book2", Author: "Author2"})
-	books = append(books, domain.Book{Id: 3, Name: "Book3", Author: "Author3"})
+	var books = []domain.Book{
+		{Id: 1, Name: "Book1", Author: "Author1"},
+		{Id: 2, Name: "Book2", Author: "Author2"},
+		{Id: 3, Name: "Book3", Author: "Author3"},
+	}
 
 	booksRepositoryGetAllMock = func() ([]domain.Book, error) {
 		return books, nil
@@ -332,7 +331,6 @@ func TestUpdateBookFailureBadData(t *testing.T) {
 func TestUnsupportedMethods(t *testing.T) {
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("OPTIONS", "/book/1", nil)
-	r.Header.Set("Content-Type", "application/json")
 
 	BookHandler(w, r)
 
