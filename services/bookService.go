@@ -67,7 +67,7 @@ func BookHandler(w http.ResponseWriter, r *http.Request) {
 func updateBookHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	book, valid := isValidData(r)
+	book, valid := isValidBook(r)
 
 	if valid {
 		updateErr := booksRepository.updateBook(book, id)
@@ -130,7 +130,7 @@ func GetAllBooksHandler(w http.ResponseWriter, _ *http.Request) {
 
 func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	book, valid := isValidData(r)
+	book, valid := isValidBook(r)
 
 	if valid {
 		rowId, insertRecordErr := booksRepository.addBook(book)
@@ -141,28 +141,25 @@ func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
-		log.Printf("Improper data passed for update: %s", getString(book))
+		log.Printf("Improper data passed for create: %s", getString(book))
 		w.WriteHeader(http.StatusBadRequest)
 	}
 }
 
-func isValidData(r *http.Request) (domain.Book, bool) {
+func isValidBook(r *http.Request) (domain.Book, bool) {
 	var book domain.Book
-	requestBody := r.Body
-	decodeErr := json.NewDecoder(requestBody).Decode(&book)
+	decodeErr := json.NewDecoder(r.Body).Decode(&book)
 
 	return book, decodeErr == nil && book.Name != "" && book.Author != ""
 }
 
 func getString(input interface{}) string {
 	jsonDeserializedObject, deserializationErr := json.Marshal(input)
-	stringObject := ""
 
 	if deserializationErr == nil {
-		stringObject = string(jsonDeserializedObject)
+		return string(jsonDeserializedObject)
 	} else {
 		log.Printf("Error while deserializing data: %s", deserializationErr)
+		return ""
 	}
-
-	return stringObject
 }

@@ -13,7 +13,7 @@ import (
 
 type booksRepositoryMock struct{}
 
-type testStruct struct {
+type scenario struct {
 	name           string
 	book           domain.Book
 	books          []domain.Book
@@ -58,7 +58,8 @@ func TestSetup(t *testing.T) {
 }
 
 func TestIsValidData(t *testing.T) {
-	tests := []testStruct{
+	t.Parallel()
+	scenarios := []scenario{
 		{
 			name:  "Invalid if author name is empty string",
 			data:  []byte(`{"Name":"Book", "Author": ""}`),
@@ -86,19 +87,20 @@ func TestIsValidData(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			r, _ := http.NewRequest("", "", bytes.NewBuffer(test.data))
-			_, valid := isValidData(r)
-			if test.valid != valid {
-				t.Errorf("Expected %v, found %v\n", test.valid, valid)
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			r, _ := http.NewRequest("", "", bytes.NewBuffer(scenario.data))
+			_, valid := isValidBook(r)
+			if scenario.valid != valid {
+				t.Errorf("Expected %v, found %v\n", scenario.valid, valid)
 			}
 		})
 	}
 }
 
 func TestGetString(t *testing.T) {
-	tests := []testStruct{
+	t.Parallel()
+	scenarios := []scenario{
 		{
 			name:           "Convert book to string",
 			book:           domain.Book{Id: 1, Name: "Book", Author: "Author"},
@@ -116,21 +118,22 @@ func TestGetString(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := getString(test.book)
-			if test.expectedString != got {
-				t.Errorf("Expected %v, got %v\n", test.expectedString, got)
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			got := getString(scenario.book)
+			if scenario.expectedString != got {
+				t.Errorf("Expected %v, got %v\n", scenario.expectedString, got)
 			}
 		})
 	}
 }
 
 func TestDeleteBooks(t *testing.T) {
+	t.Parallel()
 	r, _ := http.NewRequest("DELETE", "/book/4", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": "4"})
 
-	tests := []testStruct{
+	scenarios := []scenario{
 		{
 			name:   "should delete with status code 204",
 			status: http.StatusNoContent,
@@ -142,22 +145,23 @@ func TestDeleteBooks(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			booksRepositoryDeleteMock = func(id string) error {
-				return test.err
+				return scenario.err
 			}
 			BookHandler(w, r)
-			if w.Code != test.status {
-				t.Errorf("Expected status code: %v, got %v", test.status, w.Code)
+			if w.Code != scenario.status {
+				t.Errorf("Expected status code: %v, got %v", scenario.status, w.Code)
 			}
 		})
 	}
 }
 
 func TestAddBookHandler(t *testing.T) {
-	tests := []testStruct{
+	t.Parallel()
+	scenarios := []scenario{
 		{
 			name:   "success for book create",
 			book:   domain.Book{Name: "Book", Author: "Author"},
@@ -187,25 +191,26 @@ func TestAddBookHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			booksRepositoryAddMock = func(book domain.Book) (int64, error) {
-				return 0, test.err
+				return 0, scenario.err
 			}
 			w := httptest.NewRecorder()
-			r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(test.data))
+			r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(scenario.data))
 			r.Header.Set("Content-Type", "application/json")
 			AddBookHandler(w, r)
 
-			compareResponses(t, w, test)
+			compareResponses(t, w, scenario)
 		})
 	}
 }
 
 func TestGetBookByIdHandler(t *testing.T) {
+	t.Parallel()
 	r, _ := http.NewRequest("GET", "/book/8", nil)
 	r = mux.SetURLVars(r, map[string]string{"id": "8"})
-	tests := []testStruct{
+	scenarios := []scenario{
 		{
 			name:   "should successfully get book by id",
 			books:  []domain.Book{{Id: 8, Name: "Book", Author: "Author"}},
@@ -224,24 +229,24 @@ func TestGetBookByIdHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
-				return test.books, test.err
+				return scenario.books, scenario.err
 			}
 			BookHandler(w, r)
 
-			if w.Code != test.status {
-				t.Errorf("Expected status code: %v, Got: %v", test.status, w.Code)
+			if w.Code != scenario.status {
+				t.Errorf("Expected status code: %v, Got: %v", scenario.status, w.Code)
 			}
 
 			if w.Code == http.StatusOK {
 				var book domain.Book
 				_ = json.NewDecoder(w.Body).Decode(&book)
 
-				if book != test.books[0] {
-					t.Errorf("Expected Data: %v, Got: %v", test.books[0], book)
+				if book != scenario.books[0] {
+					t.Errorf("Expected Data: %v, Got: %v", scenario.books[0], book)
 				}
 			}
 		})
@@ -249,8 +254,9 @@ func TestGetBookByIdHandler(t *testing.T) {
 }
 
 func TestGetAllBooksHandler(t *testing.T) {
+	t.Parallel()
 	r, _ := http.NewRequest("GET", "/books", nil)
-	tests := []testStruct{
+	scenarios := []scenario{
 		{
 			name: "should get all books",
 			books: []domain.Book{
@@ -268,20 +274,21 @@ func TestGetAllBooksHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			booksRepositoryGetAllMock = func() ([]domain.Book, error) {
-				return test.books, test.err
+				return scenario.books, scenario.err
 			}
 			GetAllBooksHandler(w, r)
-			compareResponses(t, w, test)
+			compareResponses(t, w, scenario)
 		})
 	}
 }
 
 func TestUpdateBookHandler(t *testing.T) {
-	tests := []testStruct{
+	t.Parallel()
+	scenarios := []scenario{
 		{
 			name:   "should update record",
 			book:   domain.Book{Id: 1, Name: "Book", Author: "Author"},
@@ -311,53 +318,26 @@ func TestUpdateBookHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			booksRepositoryUpdateMock = func(book domain.Book, id string) error {
-				return test.err
+				return scenario.err
 			}
 
 			w := httptest.NewRecorder()
-			r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(test.data))
+			r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(scenario.data))
 			r.Header.Set("Content-Type", "application/json")
 			r = mux.SetURLVars(r, map[string]string{"id": "1"})
 
 			BookHandler(w, r)
-			compareResponses(t, w, test)
+			compareResponses(t, w, scenario)
 		})
 	}
 }
 
-func compareResponses(t *testing.T, w *httptest.ResponseRecorder, test testStruct) {
-	if w.Code != test.status {
-		t.Errorf("Expected status code: %v, Got: %v", test.status, w.Code)
-	}
-
-	if w.Code == http.StatusOK {
-		if len(test.books) == 0 {
-			var book domain.Book
-			_ = json.NewDecoder(w.Body).Decode(&book)
-
-			var books []domain.Book
-			_ = json.NewDecoder(w.Body).Decode(&books)
-
-			if book != test.book || len(books) != len(test.books) {
-				t.Errorf("Expected %v, got %v", test.book, book)
-			}
-		} else {
-			var books []domain.Book
-			_ = json.NewDecoder(w.Body).Decode(&books)
-
-			if len(books) != len(test.books) {
-				t.Errorf("Expected %v, got %v", test.books, books)
-			}
-		}
-	}
-}
-
 func TestUnsupportedMethods(t *testing.T) {
-	r, _ := http.NewRequest("OPTIONS", "/book/1", nil)
-	tests := []testStruct{
+	t.Parallel()
+	scenarios := []scenario{
 		{
 			name:   "options method not supported",
 			method: "OPTIONS",
@@ -370,14 +350,42 @@ func TestUnsupportedMethods(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
+			r, _ := http.NewRequest(scenario.method, "/book/1", nil)
 			BookHandler(w, r)
 
-			if test.status != w.Code {
-				t.Errorf("EXpected status code: %v, got %v", test.status, w.Code)
+			if scenario.status != w.Code {
+				t.Errorf("EXpected status code: %v, got %v", scenario.status, w.Code)
 			}
 		})
+	}
+}
+
+func compareResponses(t *testing.T, w *httptest.ResponseRecorder, scenario scenario) {
+	if w.Code != scenario.status {
+		t.Errorf("Expected status code: %v, Got: %v", scenario.status, w.Code)
+	}
+
+	if w.Code == http.StatusOK {
+		if len(scenario.books) == 0 {
+			var book domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&book)
+
+			var books []domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&books)
+
+			if book != scenario.book || len(books) != len(scenario.books) {
+				t.Errorf("Expected %v, got %v", scenario.book, book)
+			}
+		} else {
+			var books []domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&books)
+
+			if len(books) != len(scenario.books) {
+				t.Errorf("Expected %v, got %v", scenario.books, books)
+			}
+		}
 	}
 }
