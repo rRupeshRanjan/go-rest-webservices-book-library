@@ -5,15 +5,25 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/mux"
-	"github.com/stretchr/testify/assert"
 	"go-rest-webservices-book-library/domain"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 )
 
 type booksRepositoryMock struct{}
+
+type testStruct struct {
+	name           string
+	book           domain.Book
+	books          []domain.Book
+	data           []byte
+	status         int
+	err            error
+	method         string
+	valid          bool
+	expectedString string
+}
 
 var (
 	booksRepositoryGetMock    func(id string) ([]domain.Book, error)
@@ -43,296 +53,331 @@ func (b booksRepositoryMock) deleteBook(id string) error {
 	return booksRepositoryDeleteMock(id)
 }
 
-func TestIsBookValidFalseForInvalidData(t *testing.T) {
-	var jsonStrs = [][]byte{
-		[]byte(`{"Name":"Book", "Author": ""}`),
-		[]byte(`{"Name", "", "Author": "Author"}`),
-		[]byte(`{"Name": "", "Author": ""}`),
-		[]byte(`{}`),
-	}
-
-	for _, jsonStr := range jsonStrs {
-		r, _ := http.NewRequest("", "", bytes.NewBuffer(jsonStr))
-		_, valid := isValidData(r)
-		_ = assert.False(t, valid)
-	}
+func TestSetup(t *testing.T) {
+	booksRepository = booksRepositoryMock{}
 }
 
-func TestIsBookValidTrueForValidData(t *testing.T) {
-	var jsonStr = []byte(`{"Name":"Book", "Author": "Author"}`)
-	r, _ := http.NewRequest("", "", bytes.NewBuffer(jsonStr))
-	_, valid := isValidData(r)
-	_ = assert.True(t, valid)
+func TestIsValidData(t *testing.T) {
+	tests := []testStruct{
+		{
+			name:  "Invalid if author name is empty string",
+			data:  []byte(`{"Name":"Book", "Author": ""}`),
+			valid: false,
+		},
+		{
+			name:  "Invalid if book name is empty string",
+			data:  []byte(`{"Name", "", "Author": "Author"}`),
+			valid: false,
+		},
+		{
+			name:  "Invalid if book name or author name is empty string",
+			data:  []byte(`{"Name": "", "Author": ""}`),
+			valid: false,
+		},
+		{
+			name:  "Invalid if fields are missing",
+			data:  []byte(`{}`),
+			valid: false,
+		},
+		{
+			name:  "Valid when book name and author name and non-empty strings",
+			data:  []byte(`{"Name":"Book", "Author": "Author"}`),
+			valid: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r, _ := http.NewRequest("", "", bytes.NewBuffer(test.data))
+			_, valid := isValidData(r)
+			if test.valid != valid {
+				t.Errorf("Expected %v, found %v\n", test.valid, valid)
+			}
+		})
+	}
 }
 
 func TestGetString(t *testing.T) {
-	var book = domain.Book{
-		Id:     1,
-		Name:   "Book",
-		Author: "Author",
+	tests := []testStruct{
+		{
+			name:           "Convert book to string",
+			book:           domain.Book{Id: 1, Name: "Book", Author: "Author"},
+			expectedString: "{\"Id\":1,\"Name\":\"Book\",\"Author\":\"Author\"}",
+		},
+		{
+			name:           "Convert book to string",
+			book:           domain.Book{Id: 1, Name: "Book"},
+			expectedString: "{\"Id\":1,\"Name\":\"Book\",\"Author\":\"\"}",
+		},
+		{
+			name:           "Convert book to string",
+			book:           domain.Book{Name: "Book", Author: "Author"},
+			expectedString: "{\"Id\":0,\"Name\":\"Book\",\"Author\":\"Author\"}",
+		},
 	}
 
-	stringBook := getString(book)
-	assert.Equal(t, "{\"Id\":1,\"Name\":\"Book\",\"Author\":\"Author\"}", stringBook)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := getString(test.book)
+			if test.expectedString != got {
+				t.Errorf("Expected %v, got %v\n", test.expectedString, got)
+			}
+		})
+	}
 }
 
-func TestDeleteBooksSuccess(t *testing.T) {
-	booksRepository = booksRepositoryMock{}
-	booksRepositoryDeleteMock = func(id string) error {
-		return nil
-	}
-
-	w := httptest.NewRecorder()
+func TestDeleteBooks(t *testing.T) {
 	r, _ := http.NewRequest("DELETE", "/book/4", nil)
-	vars := map[string]string{
-		"id": "4",
-	}
-	r = mux.SetURLVars(r, vars)
+	r = mux.SetURLVars(r, map[string]string{"id": "4"})
 
-	BookHandler(w, r)
-
-	assert.Equal(t, http.StatusNoContent, w.Code)
-}
-
-func TestDeleteBooksFailure(t *testing.T) {
-	booksRepositoryDeleteMock = func(id string) error {
-		return errors.New("something bad happened")
-	}
-
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("DELETE", "/book/4", nil)
-	vars := map[string]string{
-		"id": "4",
-	}
-	r = mux.SetURLVars(r, vars)
-
-	BookHandler(w, r)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestAddBookHandlerSuccess(t *testing.T) {
-	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
-		return 0, nil
+	tests := []testStruct{
+		{
+			name:   "should delete with status code 204",
+			status: http.StatusNoContent,
+		},
+		{
+			name:   "should give 500 on delete error",
+			err:    errors.New("something bad happened"),
+			status: http.StatusInternalServerError,
+		},
 	}
 
-	var jsonStr = []byte(`{"Name":"Book","Author":"Author"}`)
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-
-	AddBookHandler(w, r)
-
-	var book domain.Book
-	_ = json.NewDecoder(w.Body).Decode(&book)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(0), book.Id)
-	assert.Equal(t, "Book", book.Name)
-	assert.Equal(t, "Author", book.Author)
-}
-
-func TestAddBookHandlerFailureBadData(t *testing.T) {
-	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
-		return 0, nil
-	}
-
-	w := httptest.NewRecorder()
-
-	var jsonStrs = [][]byte{
-		[]byte(`{"Name":"Book"}`),
-		[]byte(`{"Author":"Author"}`),
-		[]byte(`{}`),
-	}
-
-	for _, jsonStr := range jsonStrs {
-		r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(jsonStr))
-		r.Header.Set("Content-Type", "application/json")
-
-		AddBookHandler(w, r)
-
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			booksRepositoryDeleteMock = func(id string) error {
+				return test.err
+			}
+			BookHandler(w, r)
+			if w.Code != test.status {
+				t.Errorf("Expected status code: %v, got %v", test.status, w.Code)
+			}
+		})
 	}
 }
 
-func TestAddBookHandlerFailureDatabaseError(t *testing.T) {
-	booksRepositoryAddMock = func(book domain.Book) (int64, error) {
-		return 0, errors.New("error occurred while inserting record into database")
+func TestAddBookHandler(t *testing.T) {
+	tests := []testStruct{
+		{
+			name:   "success for book create",
+			book:   domain.Book{Name: "Book", Author: "Author"},
+			data:   []byte(`{"Name":"Book","Author":"Author"}`),
+			status: http.StatusOK,
+		},
+		{
+			name:   "failure for book create for bad data",
+			data:   []byte(`{"Name":"Book"`),
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "failure for book create for bad data",
+			data:   []byte(`{"Author":"Author"}`),
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "failure for book create for bad data",
+			data:   []byte(`{}`),
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "failure for book create for db errors",
+			err:    errors.New("error occurred while inserting record into database"),
+			data:   []byte(`{"Name":"Book", "Author":"Author"}`),
+			status: http.StatusInternalServerError,
+		},
 	}
 
-	var jsonStr = []byte(`{"Name":"Book", "Author":"Author"}`)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			booksRepositoryAddMock = func(book domain.Book) (int64, error) {
+				return 0, test.err
+			}
+			w := httptest.NewRecorder()
+			r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(test.data))
+			r.Header.Set("Content-Type", "application/json")
+			AddBookHandler(w, r)
 
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("POST", "/book", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-
-	AddBookHandler(w, r)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+			compareResponses(t, w, test)
+		})
+	}
 }
 
-func TestGetBookSuccess(t *testing.T) {
-	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
-		return []domain.Book{{Id: 8, Name: "Book", Author: "Author"}}, nil
+func TestGetBookByIdHandler(t *testing.T) {
+	r, _ := http.NewRequest("GET", "/book/8", nil)
+	r = mux.SetURLVars(r, map[string]string{"id": "8"})
+	tests := []testStruct{
+		{
+			name:   "should successfully get book by id",
+			books:  []domain.Book{{Id: 8, Name: "Book", Author: "Author"}},
+			status: http.StatusOK,
+		},
+		{
+			name:   "should give 404 for get book by id",
+			books:  []domain.Book{},
+			status: http.StatusNotFound,
+		},
+		{
+			name:   "should give 500 for get book by id for database errors",
+			books:  []domain.Book{},
+			err:    errors.New("error while fetching data"),
+			status: http.StatusInternalServerError,
+		},
 	}
 
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/book/1", nil)
-	vars := map[string]string{
-		"id": "1",
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
+				return test.books, test.err
+			}
+			BookHandler(w, r)
+
+			if w.Code != test.status {
+				t.Errorf("Expected status code: %v, Got: %v", test.status, w.Code)
+			}
+
+			if w.Code == http.StatusOK {
+				var book domain.Book
+				_ = json.NewDecoder(w.Body).Decode(&book)
+
+				if book != test.books[0] {
+					t.Errorf("Expected Data: %v, Got: %v", test.books[0], book)
+				}
+			}
+		})
 	}
-	r = mux.SetURLVars(r, vars)
-
-	BookHandler(w, r)
-
-	var book domain.Book
-	_ = json.NewDecoder(w.Body).Decode(&book)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(8), book.Id)
-	assert.Equal(t, "Book", book.Name)
-	assert.Equal(t, "Author", book.Author)
 }
 
-func TestGetBookFailureDatabaseError(t *testing.T) {
-	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
-		return []domain.Book{}, errors.New("error while fetching data")
-	}
-
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/book/1", nil)
-	vars := map[string]string{"id": "1"}
-	r = mux.SetURLVars(r, vars)
-
-	BookHandler(w, r)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestGetBookNoRecordsFound(t *testing.T) {
-	booksRepositoryGetMock = func(id string) ([]domain.Book, error) {
-		return []domain.Book{}, nil
-	}
-
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/book/1", nil)
-	vars := map[string]string{"id": "1"}
-	r = mux.SetURLVars(r, vars)
-
-	BookHandler(w, r)
-
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGetAllBooksHandlerSuccess(t *testing.T) {
-	var books = []domain.Book{
-		{Id: 1, Name: "Book1", Author: "Author1"},
-		{Id: 2, Name: "Book2", Author: "Author2"},
-		{Id: 3, Name: "Book3", Author: "Author3"},
-	}
-
-	booksRepositoryGetAllMock = func() ([]domain.Book, error) {
-		return books, nil
-	}
-
-	w := httptest.NewRecorder()
+func TestGetAllBooksHandler(t *testing.T) {
 	r, _ := http.NewRequest("GET", "/books", nil)
+	tests := []testStruct{
+		{
+			name: "should get all books",
+			books: []domain.Book{
+				{Id: 1, Name: "Book1", Author: "Author1"},
+				{Id: 2, Name: "Book2", Author: "Author2"},
+				{Id: 3, Name: "Book3", Author: "Author3"},
+			},
+			status: http.StatusOK,
+		},
+		{
+			name:   "should give 500 for getAll books for database error",
+			books:  []domain.Book{},
+			status: http.StatusInternalServerError,
+			err:    errors.New("error while getting data from database"),
+		},
+	}
 
-	GetAllBooksHandler(w, r)
-
-	var book []domain.Book
-	_ = json.NewDecoder(w.Body).Decode(&book)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	for i, book := range books {
-		i = i + 1
-		index := strconv.FormatInt(int64(i), 10)
-		assert.Equal(t, int64(i), book.Id)
-		assert.Equal(t, "Book"+index, book.Name)
-		assert.Equal(t, "Author"+index, book.Author)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			booksRepositoryGetAllMock = func() ([]domain.Book, error) {
+				return test.books, test.err
+			}
+			GetAllBooksHandler(w, r)
+			compareResponses(t, w, test)
+		})
 	}
 }
 
-func TestGetAllBooksHandlerFailureDatabaseError(t *testing.T) {
-	booksRepositoryGetAllMock = func() ([]domain.Book, error) {
-		return []domain.Book{}, errors.New("error while getting data from database")
+func TestUpdateBookHandler(t *testing.T) {
+	tests := []testStruct{
+		{
+			name:   "should update record",
+			book:   domain.Book{Id: 1, Name: "Book", Author: "Author"},
+			data:   []byte(`{"Name":"Book","Author":"Author"}`),
+			status: http.StatusOK,
+		},
+		{
+			name:   "should fail update record for database errors",
+			data:   []byte(`{"Name":"Book","Author":"Author"}`),
+			err:    errors.New("error while updating record in database"),
+			status: http.StatusInternalServerError,
+		},
+		{
+			name:   "should fail update record for bad data",
+			data:   []byte(`{"Name":"Book"}`),
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "should fail update record for bad data",
+			data:   []byte(`{"Author":"Author"}`),
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "should fail update record for bad data",
+			data:   []byte(`{}`),
+			status: http.StatusBadRequest,
+		},
 	}
 
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/books", nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			booksRepositoryUpdateMock = func(book domain.Book, id string) error {
+				return test.err
+			}
 
-	GetAllBooksHandler(w, r)
+			w := httptest.NewRecorder()
+			r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(test.data))
+			r.Header.Set("Content-Type", "application/json")
+			r = mux.SetURLVars(r, map[string]string{"id": "1"})
 
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+			BookHandler(w, r)
+			compareResponses(t, w, test)
+		})
+	}
 }
 
-func TestUpdateBookSuccess(t *testing.T) {
-	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
-		return nil
+func compareResponses(t *testing.T, w *httptest.ResponseRecorder, test testStruct) {
+	if w.Code != test.status {
+		t.Errorf("Expected status code: %v, Got: %v", test.status, w.Code)
 	}
 
-	var jsonStr = []byte(`{"Name":"Book","Author":"Author"}`)
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-	r = mux.SetURLVars(r, map[string]string{"id": "1"})
+	if w.Code == http.StatusOK {
+		if len(test.books) == 0 {
+			var book domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&book)
 
-	BookHandler(w, r)
+			var books []domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&books)
 
-	var book domain.Book
-	_ = json.NewDecoder(w.Body).Decode(&book)
+			if book != test.book || len(books) != len(test.books) {
+				t.Errorf("Expected %v, got %v", test.book, book)
+			}
+		} else {
+			var books []domain.Book
+			_ = json.NewDecoder(w.Body).Decode(&books)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1), book.Id)
-	assert.Equal(t, "Book", book.Name)
-	assert.Equal(t, "Author", book.Author)
-}
-
-func TestUpdateBookFailureDatabaseError(t *testing.T) {
-	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
-		return errors.New("error while updating record in database")
-	}
-
-	var jsonStr = []byte(`{"Name":"Book","Author":"Author"}`)
-	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(jsonStr))
-	r.Header.Set("Content-Type", "application/json")
-	r = mux.SetURLVars(r, map[string]string{"id": "1"})
-
-	BookHandler(w, r)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestUpdateBookFailureBadData(t *testing.T) {
-	booksRepositoryUpdateMock = func(book domain.Book, id string) error {
-		return nil
-	}
-
-	w := httptest.NewRecorder()
-	var jsonStrs = [][]byte{
-		[]byte(`{"Name":"Book"}`),
-		[]byte(`{"Author":"Author"}`),
-		[]byte(`{}`),
-	}
-
-	for _, jsonStr := range jsonStrs {
-		r, _ := http.NewRequest("PUT", "/book/1", bytes.NewBuffer(jsonStr))
-		r.Header.Set("Content-Type", "application/json")
-		r = mux.SetURLVars(r, map[string]string{"id": "1"})
-
-		BookHandler(w, r)
-
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+			if len(books) != len(test.books) {
+				t.Errorf("Expected %v, got %v", test.books, books)
+			}
+		}
 	}
 }
 
 func TestUnsupportedMethods(t *testing.T) {
-	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("OPTIONS", "/book/1", nil)
+	tests := []testStruct{
+		{
+			name:   "options method not supported",
+			method: "OPTIONS",
+			status: http.StatusMethodNotAllowed,
+		},
+		{
+			name:   "head method not supported",
+			method: "HEAD",
+			status: http.StatusMethodNotAllowed,
+		},
+	}
 
-	BookHandler(w, r)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			BookHandler(w, r)
 
-	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+			if test.status != w.Code {
+				t.Errorf("EXpected status code: %v, got %v", test.status, w.Code)
+			}
+		})
+	}
 }
