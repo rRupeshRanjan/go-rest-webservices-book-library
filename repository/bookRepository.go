@@ -3,11 +3,15 @@ package repository
 import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	"go-rest-webservices-book-library/config"
 	"go-rest-webservices-book-library/domain"
-	"log"
+	"go.uber.org/zap"
 )
 
-var database *sql.DB
+var (
+	database *sql.DB
+	logger   *zap.Logger
+)
 
 const (
 	getQuery                = "SELECT * FROM books WHERE id=?"
@@ -21,11 +25,16 @@ const (
 									author TEXT);`
 )
 
-func InitBooksDb() {
+func Init() {
+	initBooksDb()
+	logger = config.AppLogger
+}
+
+func initBooksDb() {
 	database, _ = sql.Open("sqlite3", "books.sql")
 	_, err := database.Exec(initializeDatabaseQuery)
 	if err != nil {
-		log.Panic("Failure while initializing database, {}", err.Error())
+		logger.Panic("Failure while initializing database, {}" + err.Error())
 	}
 }
 
@@ -74,7 +83,8 @@ func AddBook(book domain.Book) (int64, error) {
 	statement, _ := database.Prepare(insertQuery)
 	result, insertRecordErr := statement.Exec(book.Name, book.Author)
 	if insertRecordErr != nil {
-		log.Printf("Error occured while inserting data in books table: %s", insertRecordErr)
+		logger.Error("Error occurred while inserting data in books table: %s" + insertRecordErr.Error())
+		return -1, insertRecordErr
 	}
 	return result.LastInsertId()
 }

@@ -9,7 +9,6 @@ import (
 	"go-rest-webservices-book-library/domain"
 	"go-rest-webservices-book-library/repository"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"strconv"
 )
@@ -26,26 +25,12 @@ type BooksRepositoryInterface interface {
 
 var (
 	booksRepository BooksRepositoryInterface
-	log             *zap.Logger
+	logger          *zap.Logger
 )
 
 func Init() {
-	initRepository()
-	initLogger()
-}
-
-func initRepository() {
-	repository.InitBooksDb()
 	booksRepository = BooksRepository{}
-}
-
-func initLogger() {
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.AddSync(config.LogFile),
-		zap.InfoLevel)
-
-	log = zap.New(core)
+	logger = config.AppLogger
 }
 
 func (b BooksRepository) getBook(id string) ([]domain.Book, error) {
@@ -92,15 +77,15 @@ func updateBookHandler(w http.ResponseWriter, r *http.Request) {
 		updateErr := booksRepository.updateBook(book, id)
 		if updateErr == nil {
 			book.Id, _ = strconv.ParseInt(id, 10, 64)
-			log.Info("Successfully updated book: " + getString(book))
+			logger.Info("Successfully updated book: " + getString(book))
 			w.WriteHeader(http.StatusOK)
 			_, _ = fmt.Fprintf(w, getString(book))
 		} else {
-			log.Error("Error while updating book: " + id + " with error: " + updateErr.Error())
+			logger.Error("Error while updating book: " + id + " with error: " + updateErr.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
-		log.Error("Improper data passed for update: " + getString(book))
+		logger.Error("Improper data passed for update: " + getString(book))
 		w.WriteHeader(http.StatusBadRequest)
 	}
 }
@@ -119,7 +104,7 @@ func getBookHandler(w http.ResponseWriter, r *http.Request) {
 			_, _ = fmt.Fprintf(w, getString(books[0]))
 		}
 	} else {
-		log.Error("Error while getting book: " + id + " with error: " + getBookErr.Error())
+		logger.Error("Error while getting book: " + id + " with error: " + getBookErr.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -133,7 +118,7 @@ func deleteBookHandler(w http.ResponseWriter, r *http.Request) {
 	if deleteError == nil {
 		w.WriteHeader(http.StatusNoContent)
 	} else {
-		log.Error("Error while deleting book: " + id + " with error: " + deleteError.Error())
+		logger.Error("Error while deleting book: " + id + " with error: " + deleteError.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -147,7 +132,7 @@ func GetAllBooksHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprintf(w, getString(books))
 	} else {
-		log.Error("Error while getting all books with error: " + getAllError.Error())
+		logger.Error("Error while getting all books with error: " + getAllError.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -162,11 +147,11 @@ func AddBookHandler(w http.ResponseWriter, r *http.Request) {
 			book.Id = rowId
 			_, _ = fmt.Fprintf(w, getString(book))
 		} else {
-			log.Error("Error while creating book with error: " + insertRecordErr.Error())
+			logger.Error("Error while creating book with error: " + insertRecordErr.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	} else {
-		log.Error("Improper data passed for create: " + getString(book))
+		logger.Error("Improper data passed for create: " + getString(book))
 		w.WriteHeader(http.StatusBadRequest)
 	}
 }
@@ -184,7 +169,7 @@ func getString(input interface{}) string {
 	if deserializationErr == nil {
 		return string(jsonDeserializedObject)
 	} else {
-		log.Error("Error while deserializing data:" + deserializationErr.Error())
+		logger.Error("Error while deserializing data:" + deserializationErr.Error())
 		return ""
 	}
 }

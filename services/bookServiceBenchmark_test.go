@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gorilla/mux"
 	"go-rest-webservices-book-library/domain"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 func BenchmarkSetup(b *testing.B) {
 	booksRepository = booksRepositoryMock{}
-	initLogger()
+	logger, _ = zap.NewDevelopment()
 }
 
 func BenchmarkIsValidBookForValidData(b *testing.B) {

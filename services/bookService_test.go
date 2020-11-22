@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/gorilla/mux"
 	"go-rest-webservices-book-library/domain"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +56,7 @@ func (b booksRepositoryMock) deleteBook(id string) error {
 
 func TestSetup(t *testing.T) {
 	booksRepository = booksRepositoryMock{}
-	initLogger()
+	logger, _ = zap.NewDevelopment()
 }
 
 func TestIsValidData(t *testing.T) {
