@@ -1,4 +1,3 @@
 server:
   port: 8080
-  accesslog: "access.log"
-  applog: "catalina.log"
+  logfile: "app.log"

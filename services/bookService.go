@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
-	"os"
 	"strconv"
 )
 
@@ -41,10 +40,9 @@ func initRepository() {
 }
 
 func initLogger() {
-	logFile, _ := os.OpenFile(config.AppLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.AddSync(logFile),
+		zapcore.AddSync(config.LogFile),
 		zap.InfoLevel)
 
 	log = zap.New(core)

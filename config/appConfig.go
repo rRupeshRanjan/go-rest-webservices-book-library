@@ -3,12 +3,12 @@ package config
 import (
 	"github.com/spf13/viper"
 	"log"
+	"os"
 )
 
 var (
 	ServerPort string
-	AccessLog  string
-	AppLog     string
+	LogFile    *os.File
 )
 
 const portColon = ":"
@@ -23,8 +23,9 @@ func InitConfig() {
 	if err != nil {
 		log.Print("Error while reading config file " + err.Error())
 	} else {
-		AccessLog = viper.GetString("server.accesslog")
-		AppLog = viper.GetString("server.applog")
+		LogFile, _ = os.OpenFile(
+			viper.GetString("server.logfile"),
+			os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		ServerPort = portColon + viper.GetString("server.port")
 	}
 }
