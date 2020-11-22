@@ -12,6 +12,7 @@ import (
 
 func BenchmarkSetup(b *testing.B) {
 	booksRepository = booksRepositoryMock{}
+	initLogger()
 }
 
 func BenchmarkIsValidBookForValidData(b *testing.B) {

@@ -55,6 +55,7 @@ func (b booksRepositoryMock) deleteBook(id string) error {
 
 func TestSetup(t *testing.T) {
 	booksRepository = booksRepositoryMock{}
+	initLogger()
 }
 
 func TestIsValidData(t *testing.T) {

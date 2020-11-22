@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"go-rest-webservices-book-library/config"
 	"go-rest-webservices-book-library/domain"
 	"go-rest-webservices-book-library/repository"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -24,12 +27,27 @@ type BooksRepositoryInterface interface {
 
 var (
 	booksRepository BooksRepositoryInterface
-	log, _          = zap.NewProduction()
+	log             *zap.Logger
 )
 
 func Init() {
+	initRepository()
+	initLogger()
+}
+
+func initRepository() {
 	repository.InitBooksDb()
 	booksRepository = BooksRepository{}
+}
+
+func initLogger() {
+	logFile, _ := os.OpenFile(config.AppLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+		zapcore.AddSync(logFile),
+		zap.InfoLevel)
+
+	log = zap.New(core)
 }
 
 func (b BooksRepository) getBook(id string) ([]domain.Book, error) {
