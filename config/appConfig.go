@@ -16,7 +16,7 @@ var (
 
 const portColon = ":"
 
-func Init() {
+func init() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	viper.SetConfigType("yml")

@@ -5,13 +5,10 @@ import (
 	"github.com/gorilla/mux"
 	"go-rest-webservices-book-library/config"
 	"go-rest-webservices-book-library/services"
-	"go-rest-webservices-book-library/startup"
 	"net/http"
 )
 
 func main() {
-	startup.Initialize()
-
 	logFile := config.LogFile
 	router := mux.NewRouter()
 

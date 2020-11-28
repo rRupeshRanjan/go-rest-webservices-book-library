@@ -25,7 +25,7 @@ const (
 									author TEXT);`
 )
 
-func Init() {
+func init() {
 	initBooksDb()
 	logger = config.AppLogger
 }

@@ -28,7 +28,7 @@ var (
 	logger          *zap.Logger
 )
 
-func Init() {
+func init() {
 	booksRepository = BooksRepository{}
 	logger = config.AppLogger
 }
