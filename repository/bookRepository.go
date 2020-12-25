@@ -17,7 +17,7 @@ const (
 	getQuery                = "SELECT * FROM books WHERE id=?"
 	updateQuery             = "UPDATE books SET name=?, author=? where id=?"
 	deleteQuery             = "DELETE FROM books WHERE id=?"
-	getAllQuery             = "SELECT id, name, author FROM books"
+	getAllQuery             = "SELECT * FROM books"
 	insertQuery             = "INSERT INTO books (name, author) VALUES (?, ?)"
 	initializeDatabaseQuery = `CREATE TABLE IF NOT EXISTS books (
 									id INTEGER PRIMARY KEY, 

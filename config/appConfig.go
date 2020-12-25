@@ -17,9 +17,7 @@ var (
 const portColon = ":"
 
 func init() {
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
-	viper.SetConfigType("yml")
+	viper.SetConfigFile("config.yml")
 	viper.AutomaticEnv()
 
 	err := viper.ReadInConfig()
